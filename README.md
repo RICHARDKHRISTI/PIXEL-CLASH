@@ -229,8 +229,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - 🐛 **Bug Reports**: Open an issue on GitHub
 - 💡 **Feature Requests**: Suggest improvements via issues
-- 📧 **Contact**: [your-email@example.com]
-- 🌐 **Live Demo**: [https://your-territory-wars-app.herokuapp.com]
 
 ---
 

@@ -74,6 +74,13 @@ body {
     margin-bottom: 2rem;
 }
 
+.menu-card .primary-btn,
+.menu-card .secondary-btn {
+    width: 100%;
+    margin-bottom: 1rem;
+    justify-content: center;
+}
+
 .player-setup label {
     display: block;
     margin-bottom: 0.5rem;

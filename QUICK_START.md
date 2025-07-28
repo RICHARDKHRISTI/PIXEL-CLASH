@@ -34,6 +34,8 @@ Once started, the game will be available at:
 ## 🏆 Game Ready Features
 
 ✅ **4-Player Multiplayer** - Real-time matches with automatic matchmaking  
+✅ **Solo vs AI Mode** - Practice against intelligent AI opponents  
+✅ **Auto-Fill with AI** - AI joins when not enough players (30s wait)  
 ✅ **Beautiful UI** - Modern, responsive design with animations  
 ✅ **Live Chat** - In-game communication between players  
 ✅ **Strategic Gameplay** - Territory expansion, resource collection, combat  
@@ -74,11 +76,18 @@ railway deploy
 
 ## 🎯 What Players Experience
 
+**Multiplayer Mode:**
 1. **Enter Name** → Join matchmaking queue
-2. **Wait for Players** → Auto-matched with 3 others
+2. **Wait for Players** → Auto-matched with others (AI fills after 30s)
 3. **5-Minute Battle** → Real-time strategic gameplay
 4. **Victory Screen** → Comprehensive stats and leaderboard
 5. **Play Again** → Instant rematch capability
+
+**Solo vs AI Mode:**
+1. **Enter Name** → Click "Play vs AI" button
+2. **Instant Start** → Immediate game with 3 smart AI opponents
+3. **Strategic Challenge** → AI uses advanced tactics and prioritization
+4. **Practice Mode** → Perfect for learning game mechanics
 
 ## 🔧 Customization
 

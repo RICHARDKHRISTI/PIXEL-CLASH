@@ -7,7 +7,10 @@ A real-time multiplayer territory control strategy game built with Node.js, Sock
 ## 🎮 Game Features
 
 ### Core Gameplay
+- **Multiple Game Modes**: Multiplayer, Solo vs AI, or Mixed matches
 - **Real-time Multiplayer**: Up to 4 players in simultaneous matches
+- **Solo Play**: Practice against intelligent AI opponents
+- **Auto-Fill with AI**: AI players join if not enough humans (30s wait)
 - **Territory Expansion**: Click adjacent tiles to grow your empire
 - **Resource Collection**: Gather valuable resources for bonus points
 - **Strategic Combat**: Attack enemy territories and defend your own
@@ -189,6 +192,7 @@ The game tracks comprehensive statistics:
 
 **Client to Server:**
 - `findMatch(playerName)`: Join matchmaking queue
+- `playSolo(playerName)`: Start solo game vs AI
 - `leaveMatchmaking()`: Exit matchmaking
 - `playerMove({x, y})`: Make a move
 - `chatMessage(message)`: Send chat message

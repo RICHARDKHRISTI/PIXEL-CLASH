@@ -84,6 +84,10 @@ class TerritoryWarsClient {
             this.findMatch();
         });
         
+        document.getElementById('playSoloBtn').addEventListener('click', () => {
+            this.playSolo();
+        });
+        
         document.getElementById('cancelMatchBtn').addEventListener('click', () => {
             this.cancelMatchmaking();
         });
@@ -159,6 +163,17 @@ class TerritoryWarsClient {
         
         this.socket.emit('findMatch', playerName);
         this.showScreen('matchmakingScreen');
+    }
+    
+    playSolo() {
+        const playerName = document.getElementById('playerName').value.trim() || 'Warrior';
+        if (playerName.length > 15) {
+            alert('Player name must be 15 characters or less');
+            return;
+        }
+        
+        this.showLoadingOverlay('Starting solo game...');
+        this.socket.emit('playSolo', playerName);
     }
     
     cancelMatchmaking() {

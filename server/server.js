@@ -50,26 +50,63 @@ io.on('connection', (socket) => {
     
     const player = {
       id: socket.id,
-      name: playerName || `Player${Math.floor(Math.random() * 1000)}`
+      name: playerName || `Player${Math.floor(Math.random() * 1000)}`,
+      isAI: false,
+      joinTime: Date.now()
     };
     
     matchmakingQueue.push(player);
     socket.emit('matchmakingStatus', { 
-      message: `Looking for players... (${matchmakingQueue.length}/4)`,
+      message: `Looking for players... (${matchmakingQueue.length}/4) - AI fills after 30s`,
       playersInQueue: matchmakingQueue.length 
     });
     
     // Notify other players in queue
     matchmakingQueue.forEach(p => {
-      if (p.id !== socket.id) {
+      if (p.id !== socket.id && !p.isAI) {
         io.to(p.id).emit('matchmakingStatus', { 
-          message: `Looking for players... (${matchmakingQueue.length}/4)`,
+          message: `Looking for players... (${matchmakingQueue.length}/4) - AI fills after 30s`,
           playersInQueue: matchmakingQueue.length 
         });
       }
     });
     
     checkMatchmaking();
+  });
+  
+  // Handle solo play request
+  socket.on('playSolo', (playerName) => {
+    const player = {
+      id: socket.id,
+      name: playerName || `Player${Math.floor(Math.random() * 1000)}`,
+      isAI: false
+    };
+    
+    // Create AI players
+    const aiPlayers = [];
+    const aiNames = ['AI Commander', 'Bot Warrior', 'Cyber General'];
+    
+    for (let i = 0; i < 3; i++) {
+      aiPlayers.push({
+        id: `ai_${Date.now()}_${i}`,
+        name: aiNames[i],
+        isAI: true
+      });
+    }
+    
+    const allPlayers = [player, ...aiPlayers];
+    const roomId = `solo_${Date.now()}`;
+    
+    // Create game room with AI
+    gameRooms[roomId] = new GameRoom(roomId, allPlayers);
+    
+    // Add human player to room
+    socket.join(roomId);
+    playerSessions[socket.id] = { roomId, playerIndex: 0 };
+    socket.emit('matchFound', gameRooms[roomId].getGameState());
+    
+    // Start game
+    gameRooms[roomId].startGame();
   });
   
   // Handle leaving matchmaking
@@ -138,16 +175,64 @@ function checkMatchmaking() {
     
     // Add players to room and create sessions
     players.forEach((player, index) => {
-      const socket = io.sockets.sockets.get(player.id);
-      if (socket) {
-        socket.join(roomId);
-        playerSessions[player.id] = { roomId, playerIndex: index };
-        socket.emit('matchFound', gameRooms[roomId].getGameState());
+      if (!player.isAI) {
+        const socket = io.sockets.sockets.get(player.id);
+        if (socket) {
+          socket.join(roomId);
+          playerSessions[player.id] = { roomId, playerIndex: index };
+          socket.emit('matchFound', gameRooms[roomId].getGameState());
+        }
       }
     });
     
     // Start game loop
     gameRooms[roomId].startGame();
+  } else if (matchmakingQueue.length >= 1) {
+    // Check if any player has been waiting too long (30 seconds)
+    const waitingTime = 30000; // 30 seconds
+    const oldestPlayer = matchmakingQueue[0];
+    const currentTime = Date.now();
+    
+    if (!oldestPlayer.joinTime) {
+      oldestPlayer.joinTime = currentTime;
+    }
+    
+    if (currentTime - oldestPlayer.joinTime > waitingTime) {
+      // Fill with AI players
+      const roomId = `mixed_${Date.now()}`;
+      const humanPlayers = matchmakingQueue.splice(0, matchmakingQueue.length);
+      const aiNames = ['AI Commander', 'Bot Warrior', 'Cyber General', 'Neural Fighter'];
+      
+      // Create AI players to fill remaining slots
+      const aiPlayers = [];
+      const neededAI = 4 - humanPlayers.length;
+      
+      for (let i = 0; i < neededAI; i++) {
+        aiPlayers.push({
+          id: `ai_${Date.now()}_${i}`,
+          name: aiNames[i] || `AI Bot ${i + 1}`,
+          isAI: true
+        });
+      }
+      
+      const allPlayers = [...humanPlayers, ...aiPlayers];
+      
+      // Create game room
+      gameRooms[roomId] = new GameRoom(roomId, allPlayers);
+      
+      // Add human players to room
+      humanPlayers.forEach((player, index) => {
+        const socket = io.sockets.sockets.get(player.id);
+        if (socket) {
+          socket.join(roomId);
+          playerSessions[player.id] = { roomId, playerIndex: index };
+          socket.emit('matchFound', gameRooms[roomId].getGameState());
+        }
+      });
+      
+      // Start game
+      gameRooms[roomId].startGame();
+    }
   }
 }
 
@@ -190,7 +275,8 @@ class GameRoom {
         territories: [],
         startPosition: START_POSITIONS[index],
         connected: true,
-        score: 0
+        score: 0,
+        isAI: playerInfo.isAI || false
       };
       
       // Capture starting territory
@@ -348,6 +434,11 @@ class GameRoom {
       this.generateResources(1);
     }
     
+    // AI moves (every 2-3 seconds)
+    if (this.timer % 2 === 0 || this.timer % 3 === 0) {
+      this.processAIMoves();
+    }
+    
     this.broadcastState();
     
     // Check game end conditions
@@ -417,6 +508,99 @@ class GameRoom {
       gameStarted: this.gameStarted,
       gameEnded: this.gameEnded
     };
+  }
+  
+  // AI Logic Methods
+  processAIMoves() {
+    const aiPlayers = Object.values(this.players).filter(p => p.isAI && p.connected);
+    
+    aiPlayers.forEach(aiPlayer => {
+      // Add some randomness to AI decision making
+      if (Math.random() < 0.7) { // 70% chance AI makes a move
+        const move = this.getAIMove(aiPlayer);
+        if (move) {
+          this.handlePlayerMove(aiPlayer.id, move.x, move.y);
+        }
+      }
+    });
+  }
+  
+  getAIMove(aiPlayer) {
+    const possibleMoves = this.getValidMovesForPlayer(aiPlayer.id);
+    if (possibleMoves.length === 0) return null;
+    
+    // AI Strategy: Prioritize moves
+    let bestMoves = [];
+    
+    // 1. Prioritize resource collection (highest priority)
+    const resourceMoves = possibleMoves.filter(move => 
+      this.grid[move.y][move.x].hasResource
+    );
+    if (resourceMoves.length > 0) {
+      bestMoves = resourceMoves;
+    } else {
+      // 2. Prioritize attacking weak enemy territories
+      const attackMoves = possibleMoves.filter(move => {
+        const cell = this.grid[move.y][move.x];
+        return cell.ownerId && cell.ownerId !== aiPlayer.id && cell.strength <= 15;
+      });
+      
+      if (attackMoves.length > 0) {
+        bestMoves = attackMoves;
+      } else {
+        // 3. Expand to neutral territories
+        const expansionMoves = possibleMoves.filter(move => 
+          !this.grid[move.y][move.x].ownerId
+        );
+        
+        if (expansionMoves.length > 0) {
+          bestMoves = expansionMoves;
+        } else {
+          // 4. Reinforce own territories
+          const reinforceMoves = possibleMoves.filter(move => {
+            const cell = this.grid[move.y][move.x];
+            return cell.ownerId === aiPlayer.id && cell.strength < 30;
+          });
+          
+          bestMoves = reinforceMoves.length > 0 ? reinforceMoves : possibleMoves;
+        }
+      }
+    }
+    
+    // Return random move from best moves
+    return bestMoves[Math.floor(Math.random() * bestMoves.length)];
+  }
+  
+  getValidMovesForPlayer(playerId) {
+    const player = this.players[playerId];
+    if (!player) return [];
+    
+    const validMoves = [];
+    
+    // Check all adjacent cells to player's territories
+    player.territories.forEach(territory => {
+      const directions = [
+        { dx: 0, dy: -1 }, // Up
+        { dx: 1, dy: 0 },  // Right
+        { dx: 0, dy: 1 },  // Down
+        { dx: -1, dy: 0 }  // Left
+      ];
+      
+      directions.forEach(dir => {
+        const x = territory.x + dir.dx;
+        const y = territory.y + dir.dy;
+        
+        if (x >= 0 && x < GRID_WIDTH && y >= 0 && y < GRID_HEIGHT) {
+          // Check if this move is already in validMoves
+          const existingMove = validMoves.find(move => move.x === x && move.y === y);
+          if (!existingMove) {
+            validMoves.push({ x, y });
+          }
+        }
+      });
+    });
+    
+    return validMoves;
   }
 }
 

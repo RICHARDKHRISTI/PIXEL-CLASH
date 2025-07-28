@@ -1,0 +1,32 @@
+{
+  "name": "territory-wars-game",
+  "version": "1.0.0",
+  "description": "A full-featured multiplayer territory control strategy game",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "cd server && npm run dev",
+    "install-server": "cd server && npm install",
+    "setup": "npm run install-server",
+    "build": "echo 'No build step required'",
+    "test": "echo 'Tests coming soon'"
+  },
+  "keywords": [
+    "multiplayer",
+    "game",
+    "strategy",
+    "territory",
+    "websocket",
+    "nodejs",
+    "realtime"
+  ],
+  "author": "Territory Wars Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/territory-wars.git"
+  }
+}
